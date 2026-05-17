@@ -13,7 +13,7 @@
 
 5. Make a virtual environment by running `python3 -m venv .venv`.
 
-6. Activate the environment using `source .venv/bin/activate` for MacOS/Linux. For Windows Powershell, use `.\venv\Scripts\Activate.ps1`.
+6. Activate the environment using `source .venv/bin/activate` for MacOS/Linux. For Windows PowerShell, use `.\venv\Scripts\Activate.ps1`.
 
 7. Install the dependencies from the requirements.txt file using `pip install -r requirements.txt`.
 
