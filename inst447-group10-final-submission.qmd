@@ -535,32 +535,482 @@ The transformation decisions were guided by the project goal of analyzing relati
 
 
 # Analysis & Evaluation
-The text in this section includes:
-- descriptions of all variables
-- noteworthy patterns,
-- including discussion of potential sources of bias or unbalanced
-patterns
-You are encouraged to structure this major section into subsections as you
-wish, and to break up and interweave code chunks, to help with
-organization and readability.
+
+Descriptive EDA Statistics
 ```{python}
-# The code chunk(s) in this section should include:
-# - descriptive stats for all relevant variables
-# - descriptive stat(s) for any relevant relationships
-# - visualizations for all relevant variables
-# - visualizations for any relevant relationships
-# - code for exploring potential sources of bias, including missing data,
+print("\n=========================")
+print("DESCRIPTIVE EDA STATISTICS")
+print("=========================")
+
+# Basic info
+print("\nDataset shape:", df.shape)
+print("\nMissing values:\n", df.isnull().sum())
+
+# Ticker distribution
+print("\nTicker distribution:\n", df["ticker"].value_counts())
+
+# Sentiment distribution
+print("\nSentiment distribution:\n", df["sentiment"].value_counts())
+
+# Source distribution (bias indicator)
+print("\nSource distribution:\n", df["source"].value_counts())
+
+# Confidence summary
+# 50% is the median value
+print("\nConfidence stats:\n", df["sen_confidence"].describe())
+
+# Sentiment distribution
+print("\nSentiment distribution:\n", df["sentiment"].value_counts())
+
+# Text columns info
+
+# Headline
+# Usually a short, concise news title
+# Typically 5-20 words 
+# Designed to summarize the main event quickly
+
+# Summary
+# A longer paragraph-style description of the article
+# Typically 20-100+ words
+# Provides key financial/business events and more context
+
+# Text
+# Headline + summary concatenated (combined)
+# At least as long as the headline
+# Usually longer than just the summary
+# Used as input for the FinBERT sentiment model
+
+text_columns = ["headline", "summary", "text"]
+
+summary_stats = []
+
+for col in text_columns:
+
+    word_counts = df[col].fillna("").apply(
+        lambda x: len(str(x).split())
+    )
+
+    summary_stats.append({
+        "column": col,
+        "min": word_counts.min(),
+        "max": word_counts.max(),
+        "mean": round(word_counts.mean(), 2),
+        "median": word_counts.median(),
+        "missing": df[col].isnull().sum()
+    })
+
+stats_df = pd.DataFrame(summary_stats)
+print("\nStats for text columns:")
+print(stats_df)
+
+# Date column info
+df["date"] = pd.to_datetime(df["date"])
+
+earliest_date = df["date"].min()
+latest_date = df["date"].max()
+
+print("\nDate stats:")
+print("min ", earliest_date)
+print("max ", latest_date)
+print("timespan ", latest_date - earliest_date)
+print("median ", df["date"].median())
+print("mean ", df["date"].mean())
+
+print("\nDate distribution:")
+print(df["date"].value_counts())
+
+# Sentiment over time
+print("\nSentiment by date:")
+print(df.groupby("date")["sentiment"].value_counts())
+
+# Average confidence per sentiment
+print("\nAvg confidence by sentiment:")
+print(df.groupby("sentiment")["sen_confidence"].mean())
 ```
 
-# Data Product & Guide
-The text in this section includes:
-- description and "user's guide" for the final data product
-- general info and description on each variable/column in the data
-product
-- note: the descriptive stats, etc. should already be in the Analysis
-section, but if there are any new/transformed variables that were not
-in that section, those should have descriptive stats and plots here
+Descriptive EDA Visualizations
+
 ```{python}
-# The code chunk(s) in this section should include:
-# - The code needed to "finalize" or "export" the final data product.
+# Confidence distribution histogram
+
+plt.figure(figsize=(8,5))
+
+sns.histplot(
+    df["sen_confidence"],
+    bins=20,
+    kde=True
+)
+
+plt.title("Distribution of FinBERT Confidence Scores")
+plt.xlabel("Confidence")
+plt.ylabel("Frequency")
+plt.show()
+
+# Ticker distribution bar graph
+
+plt.figure(figsize=(6,4))
+
+sns.countplot(
+    data=df,
+    x="ticker",
+    order=df["ticker"].value_counts().index
+)
+
+plt.title("Ticker Distribution")
+plt.xlabel("Ticker")
+plt.ylabel("Count")
+plt.show()
+
+# Sentiment distribution bar graph
+
+plt.figure(figsize=(6,4))
+
+sns.countplot(
+    data=df,
+    x="sentiment",
+    order=df["sentiment"].value_counts().index
+)
+
+plt.title("Sentiment Distribution")
+plt.xlabel("Sentiment")
+plt.ylabel("Count")
+plt.show()
+
+# Source distribution bar graph
+
+plt.figure(figsize=(10,6))
+
+source_counts = df["source"].value_counts().head(10) # up to 10 sources
+
+sns.barplot(
+    x=source_counts.values,
+    y=source_counts.index
+)
+
+plt.title("Top News Sources")
+plt.xlabel("Article Count")
+plt.ylabel("Source")
+
+plt.show()
+
+# Word count histograms for text columns
+
+df["headline_word_count"] = df["headline"].fillna("").apply(
+    lambda x: len(str(x).split())
+)
+
+df["summary_word_count"] = df["summary"].fillna("").apply(
+    lambda x: len(str(x).split())
+)
+
+df["text_word_count"] = df["text"].fillna("").apply(
+    lambda x: len(str(x).split())
+)
+
+plt.figure(figsize=(8,5))
+
+sns.histplot(
+    df["headline_word_count"],
+    bins=15,
+    kde=True
+)
+
+plt.title("Headline Word Count Distribution")
+plt.xlabel("Words")
+plt.ylabel("Frequency")
+plt.show()
+
+plt.figure(figsize=(8,5))
+
+sns.histplot(
+    df["summary_word_count"],
+    bins=20,
+    kde=True
+)
+
+plt.title("Summary Word Count Distribution")
+plt.xlabel("Words")
+plt.ylabel("Frequency")
+
+plt.show()
+
+plt.figure(figsize=(8,5))
+
+sns.histplot(
+    df["text_word_count"],
+    bins=20,
+    kde=True
+)
+
+plt.title("Combined Text Word Count Distribution")
+plt.xlabel("Words")
+plt.ylabel("Frequency")
+plt.show()
+
+# Date frequencies bar graph
+
+plt.figure(figsize=(10,5))
+
+date_counts = df["date"].value_counts().sort_index()
+
+sns.barplot(
+    x=date_counts.index.astype(str),
+    y=date_counts.values
+)
+
+plt.xticks(rotation=45)
+plt.title("Articles Published Per Day")
+plt.xlabel("Date")
+plt.ylabel("Article Count")
+
+plt.show()
+
+# Confidence by sentiment box and whisker plots
+
+plt.figure(figsize=(8,5))
+
+sns.boxplot(
+    data=df,
+    x="sentiment",
+    y="sen_confidence"
+)
+
+plt.title("Confidence by Sentiment")
+plt.xlabel("Sentiment")
+plt.ylabel("Confidence Score")
+plt.show()
+
+# Sentiment by date
+
+df["date"] = pd.to_datetime(df["date"])
+
+sentiment_time = pd.crosstab(
+    df["date"],
+    df["sentiment"]
+)
+
+sentiment_time.index = sentiment_time.index.strftime("%Y-%m-%d")
+
+sentiment_time.plot(
+    kind="bar",
+    stacked=False,
+    figsize=(10,6)
+)
+
+plt.title("Sentiment Distribution Over Time")
+plt.xlabel("Date")
+plt.ylabel("Article Count")
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# Sentiment by news source bar graph
+
+top_sources = df["source"].value_counts().head(5).index
+
+filtered_df = df[df["source"].isin(top_sources)]
+
+source_sentiment = pd.crosstab(
+    filtered_df["source"],
+    filtered_df["sentiment"]
+)
+
+source_sentiment.plot(
+    kind="bar",
+    stacked=False,
+    figsize=(10,6)
+)
+
+plt.title("Sentiment by News Source")
+plt.xlabel("Source")
+plt.ylabel("Article Count")
+plt.xticks(rotation=45)
+
 ```
+### Expected Distributions
+
+Several variables followed anticipated patterns given the financial nature of the data:
+
+- Ticker Distribution: As expected, the Ticker Distribution shows 100% of the 174 articles belong to "AAPL." This is expected as the extraction script was specifically scoped to this ticker.
+- Articles Published Per Day: The Articles Published Per Day graph shows a massive spike on 2026-05-01. This aligns with the "Apple Q2 Earnings" headlines noted in the output, as earnings reports typically trigger a high volume of immediate coverage.
+- Combined Text Word Count Distribution: The distribution graph is right-skewed, which is typical for news data. Most articles consist of a concise headline and a short summary (averaging ~44 words), while a few outliers provide much more extensive context.
+- Sentiment Distribution: The Sentiment Distribution is predominantly positive. Given that the headlines mention Apple "beating estimates" and hitting "record highs," a positive skew is the logical outcome of a strong earnings report.
+
+### Unexpected Distributions and Observations
+
+Some variables revealed more nuanced or surprising trends:
+
+- Distribution of FinBERT Confidence Scores: While one might expect a normal distribution the graph shows a strong left skew. The model is highly confident (>0.90) for a large portion of the data (79 articles). This suggests the language used in these financial reports is very explicit and aligns well with FinBERT's training data.
+- Confidence by Sentiment: The "positive" sentiment boxplot shows many low-confidence outliers. This is unexpected because positive news is usually straightforward; however, it suggests some "positive" articles might contain mixed language (e.g., "Apple Surged... 3 Concerns Lurking Beneath") that dampens the model's certainty.
+- Sentiment by News Source: The Sentiment by News Source chart reveals significant source bias. Yahoo is overwhelmingly positive, while CNBC appears almost exclusively neutral in its reporting style for this period. This highlights how the choice of data source can fundamentally shift the perceived market sentiment.
+- Sentiment Distribution Over Time: The sentiment shifted from neutral/positive on April 30th to overwhelmingly positive on May 1st (Earnings Day), before cooling back toward neutral on May 2nd. The rapid "digestion" of the news by the market is clearly visible here.
+
+Bias-Related EDA Code
+
+```{python}
+# BIAS EXPLORATION
+
+print("\n=========================")
+print("BIAS ANALYSIS")
+print("=========================")
+
+# Bias check 1: source imbalance
+source_counts = df["source"].value_counts()
+print("\nSource imbalance:\n", source_counts)
+
+# Bias check 2: sentiment skew
+sentiment_counts = df["sentiment"].value_counts(normalize=True)
+print("\nSentiment proportions:\n", sentiment_counts)
+
+# Bias check 3: missing data patterns
+print("\nMissing data pattern:\n", df.isna().mean())
+
+# Bias check 4: sentiment by source
+print("\nSentiment by source:\n")
+print(df.groupby("source")["sentiment"].value_counts())
+
+# Bias check 5: potential overconfidence
+high_confidence = df[df["sen_confidence"] > 0.90]
+print("\nHigh confidence articles (>0.90):", len(high_confidence))
+
+# DATA PRODUCT AND DESCRIPTION
+df.to_csv("stocks_v2.csv", index=False)
+
+# =========================
+# VOLUME vs SENTIMENT VISUALIZATION
+# =========================
+# Build a per-day frame using `results` (transformed_dataset), which
+# already has aligned `volume` and per-article `sentiment_results`.
+#
+# Daily net sentiment score:
+#   for each article:  +confidence if positive, -confidence if negative, 0 if neutral
+#   daily score = mean of those signed confidences  (range roughly [-1, 1])
+
+sentiment_sign = {"positive": 1, "negative": -1, "neutral": 0}
+
+rows = []
+for day, payload in results.items():
+    scores = [
+        sentiment_sign.get(s["label"].lower(), 0) * s["score"]
+        for s in payload["sentiment_results"]
+    ]
+    net_sentiment = sum(scores) / len(scores) if scores else 0.0
+    rows.append({
+        "date": day,
+        "volume": payload["volume"],
+        "article_count": len(payload["articles"]),
+        "net_sentiment": net_sentiment,
+    })
+
+daily_df = pd.DataFrame(rows)
+daily_df["date"] = pd.to_datetime(daily_df["date"])
+daily_df = daily_df.sort_values("date").reset_index(drop=True)
+
+print("\nDaily volume vs sentiment:")
+print(daily_df)
+
+# Daily volume vs sentiment
+fig, ax1 = plt.subplots(figsize=(11, 6))
+
+x_labels = daily_df["date"].dt.strftime("%Y-%m-%d")
+
+ax1.bar(
+    x_labels,
+    daily_df["volume"],
+    color="steelblue",
+    alpha=0.6,
+    label="Trade Volume",
+)
+ax1.set_xlabel("Date")
+ax1.set_ylabel("Trade Volume", color="steelblue")
+ax1.tick_params(axis="y", labelcolor="steelblue")
+ax1.tick_params(axis="x", rotation=45)
+
+ax2 = ax1.twinx()
+ax2.plot(
+    x_labels,
+    daily_df["net_sentiment"],
+    color="darkorange",
+    marker="o",
+    linewidth=2,
+    label="Net Sentiment",
+)
+ax2.axhline(0, color="gray", linestyle="--", linewidth=1)
+ax2.set_ylabel("Net Sentiment (−1 to +1)", color="darkorange")
+ax2.tick_params(axis="y", labelcolor="darkorange")
+ax2.set_ylim(-1, 1)
+
+plt.title(f"{symbol}: Daily Trade Volume vs. FinBERT Net Sentiment")
+fig.tight_layout()
+plt.show()
+```
+
+Bias-Related EDA Narrative
+
+
+
+# Data Product & Guide
+
+```{markdown}
+## Variable descriptions
+
+### Quantitative
+
+sen_confidence (continuous/quantitative) - how certain Finbert is about its sentiment rating; ranges from -1 to 1
+
+headline_word_count (discrete/quantitative) - the number of words in the headline
+
+summary_word_count (discrete/quantitative) - the number of words in the summary
+
+text_word_count (discrete/quantitative) - the total number of words in the headline and summary combined
+
+### Qualitative
+
+ticker (categorical) - a unique abbreviation for the name of the stock (e.g. AAPL for Apple), often around 3 to 5 characters long
+
+headline* - the title for the news article; intended to grab the reader’s attention and highlight the primary value of the article; provided by the author(s) of the article
+
+summary* - text that condenses the main points of the article; generated by Finnhub using NLP and LLM technology
+
+text* - the headline and summary combined/concatenated with a space in between
+
+source (categorical) - the news source that the article was published in
+
+sentiment (categorical/qualitative) - general attitude towards a stock, which can be positive, negative, or neutral; derived from Finbert’s analysis
+
+### Temporal
+
+date (temporal) - the time the article was published in yyyy-mm-dd format
+
+* the values for these variables are “free-response”-like or unique
+```
+
+```{python}
+# to get the variable data types
+df.info()
+
+```
+
+## Code for data product
+
+To export the final DataFrame to a csv file, run `df.to_csv("stocks.csv", index=False)`.
+
+## User guide
+
+1. Download the installer for Positron from this [link](https://positron.posit.co/download.html). Make sure to accept the license agreement by checking the box. Choose the file that matches your platform. The platform information is available if you visit System Information for Windows or About This Mac for MacOS.
+
+2. Clone the repository from this [link](https://github.com/lejio/INST447-Final-Project/tree/main) using `git clone git@github.com:lejio/INST447-Final-Project.git` for SSH.
+
+3. Open the “INST447-Final-Project” folder in Positron by clicking on the Open button with the file icon at the top left of the application.
+
+4. Go to the terminal at the bottom half of the interface. Make sure that you are in the correct folder. Your path should have “INST477-Final-Project.” If not, use the cd command to get there. Here is a [tutorial](https://tutorials.codebar.io/command-line/introduction/tutorial.html) on using the command line.
+
+5. Make a virtual environment by running `python3 -m venv .venv`.
+
+6. Activate the environment using `source .venv/bin/activate` for MacOS/Linux. For Windows Powershell, use `.\venv\Scripts\Activate.ps1`.
+
+7. Install the dependencies from the requirements.txt file using `pip install -r requirements.txt`.
+
+7.5. Check that quarto is installed in the environment using `quarto -v` in the terminal. If it isn’t installed, install it using `brew install --cask quarto` for MacOS if you have Homebrew. Otherwise, you can install it from this [website](https://quarto.org/docs/get-started). You may have to restart Positron and your terminal.
+
+8. Open the .qmd file by clicking on it from the file explorer and render it by clicking the “Preview” button close to the top of the opened file. A side bar on the right should open, and there should be a square with an arrow icon. Clicking the icon will open a new browser window, which will give you access to the notebook code and output running on localhost. Use CTRL + C to quit.
