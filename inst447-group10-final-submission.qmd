@@ -946,8 +946,13 @@ plt.show()
 ```
 
 Bias-Related EDA Narrative
+From the analysis of the financial news dataset for Apple (AAPL), we looked at key sources of bias that had the most effect on the dataset’s conclusions.
 
+Source Imbalance: Yahoo Finance made up a wide share of the dataset, contributing to about 105 of the 174 articles collected. When one source accounts for nearly two thirds of your data, the overall judgement stops reflecting the broader financial media landscape and starts reflecting that one source's voice. This is not a mistake that happens during analysis but rather a consequence of the way the data was pulled. The Finnhub API takes from a fixed pool of partner sources, so the imbalance was baked in from the moment collection began. Looking at how sentiment broke down by source makes this problem concrete. CNBC came in almost entirely neutral across its articles and ChartMill was neutral across every single one of its contributions, yet because Yahoo so heavily outnumbers both of them, their tone barely registers in the overall picture. The dataset reads as more bullish than it probably should, not necessarily because the market was that optimistic, but because the loudest voice in the room happened to lean that way.
 
+Sentiment Skew from Collection Window: The overall sentiment data was 51.1% positive, 33.3% neutral, and 15.5% negative which heavily shaped when the data was collected. The two-day window of May 1-2, 2026 coincided directly with Apple’s blowout Q2 earnings report, a strongly positive market event. Collecting data during a major report beat means that the inherent positive bias that would not exist during a neutral or negative market period. This limits how broadly any conclusions can be generalized — the findings describe sentiment during one exceptional event, not typical market conditions for AAPL.
+
+Model Confidence on Negative Sentiment: Negative articles had the lowest average FinBERT confidence at 0.786, compared to 0.858 for positive and 0.835 for neutral. This suggests the model is least certain when classifying bearish or mixed language, which is particularly relevant for articles that discuss conflicting signals — such as Apple's record earnings alongside rising memory costs and Mac supply constraints. These articles may be forced into a single label that does not fully capture their nuance. A worthwhile follow-up would be applying a confidence threshold to flag low-certainty classifications for manual review, or exploring multi-label approaches for articles with clearly mixed sentiment.
 
 # Data Product & Guide
 
